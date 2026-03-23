@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MathBot — Ultimate Solver</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
+#app { display: flex; flex-direction: column; height: 96vh; max-height: 820px; width: 100%; max-width: 520px; border-radius: 18px; overflow: hidden; background: #fff; box-shadow: 0 8px 40px rgba(0,0,0,0.13); }
+
+/* HEADER */
+#header { display: flex; align-items: center; gap: 12px; padding: 13px 18px; background: #f8f9fa; border-bottom: 1px solid #eee; flex-shrink: 0; }
+#face { width: 46px; height: 46px; border-radius: 50%; background: #fff; border: 2px solid #e0e0e0; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+#face.thinking { animation: think 0.6s ease-in-out infinite; }
+@keyframes think{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+#hinfo { flex: 1; }
+#hname { font-size: 15px; font-weight: 700; color: #111; }
+#hsub { font-size: 11px; color: #999; margin-top: 1px; }
+#hstatus { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+.sdot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; display: inline-block; }
+.sdot.busy { background: #ff9800; animation: bl .7s infinite; }
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.2}}
+#stxt { font-size: 11px; color: #888; }
+#hctrl { display: flex; gap: 6px; align-items: center; }
+.hbtn { padding: 5px 12px; border-radius: 20px; border: 1px solid #e0e0e0; background: #fff; color: #666; font-size: 12px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.hbtn.on { background: #e8f0fe; color: #1a73e8; border-color: #aac4f5; }
+#spdbtn { padding: 5px 10px; border-radius: 20px; border: 1px solid #e0e0e0; background: #fff; color: #666; font-size: 12px; cursor: pointer; font-family: inherit; }
+
+/* WAVE */
+#wavebar { display: flex; align-items: center; gap: 3px; padding: 5px 18px; background: #f8f9fa; border-bottom: 1px solid #eee; flex-shrink: 0; height: 26px; opacity: 0; transition: opacity 0.3s; }
+.wb { width: 3px; border-radius: 2px; background: #1a73e8; height: 4px; transition: height 0.08s; }
+
+/* QUICK BUTTONS */
+#qrow { display: flex; gap: 5px; flex-wrap: wrap; padding: 7px 14px; background: #f8f9fa; border-bottom: 1px solid #eee; flex-shrink: 0; }
+.qb { font-size: 11px; padding: 4px 10px; border-radius: 14px; border: 1px solid #e0e0e0; background: #fff; color: #555; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
+.qb:hover { background: #f0f0f0; color: #111; }
+
+/* MESSAGES */
+#messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; background: #f5f6f8; scroll-behavior: smooth; }
+.msg { display: flex; gap: 9px; max-width: 95%; opacity: 0; animation: fu .3s ease forwards; }
+.msg.user { align-self: flex-end; flex-direction: row-reverse; max-width: 78%; }
+.msg.agent { align-self: flex-start; }
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.av { width: 28px; height: 28px; border-radius: 50%; background: #e8e8e8; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+.ubub { padding: 10px 14px; font-size: 13.5px; line-height: 1.6; background: #1a73e8; color: #fff; border-radius: 16px 4px 16px 16px; word-break: break-word; }
+.atch-img { max-width: 180px; border-radius: 10px; border: 1px solid #ddd; margin-bottom: 5px; display: block; }
+.atch-chip { display: inline-flex; align-items: center; gap: 6px; background: #f0f0f0; border: 1px solid #ddd; border-radius: 10px; padding: 4px 10px; font-size: 12px; color: #555; margin-bottom: 5px; }
+.ts { font-size: 10px; color: #bbb; margin-top: 3px; padding: 0 3px; }
+
+/* SOLUTION */
+.sol-wrap { display: flex; flex-direction: column; gap: 8px; }
+.prob-box { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 12px 14px; }
+.prob-lbl { font-size: 10px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 5px; }
+.prob-eq { font-family: 'Courier New', monospace; font-size: 14px; color: #111; font-weight: 600; line-height: 1.6; }
+.intro-txt { font-size: 12.5px; color: #666; line-height: 1.75; }
+
+.step-card { background: #fff; border: 1px solid #e8e8e8; border-radius: 12px; overflow: hidden; transition: border-color 0.25s; }
+.step-card.active-step { border-color: #1a73e8; }
+.step-head { display: flex; align-items: center; gap: 8px; padding: 9px 13px; border-bottom: 1px solid #f0f0f0; }
+.snum { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.snum.bracket { background: #fff3e0; color: #e65100; }
+.snum.order { background: #fce4ec; color: #c62828; }
+.snum.division { background: #e3f2fd; color: #1565c0; }
+.snum.multiplication { background: #e8f5e9; color: #2e7d32; }
+.snum.addition,.snum.subtraction,.snum.general { background: #f5f5f5; color: #555; border: 1px solid #e0e0e0; }
+.stitle { font-size: 12.5px; font-weight: 600; color: #222; flex: 1; }
+.srule { font-size: 10px; color: #888; background: #f5f5f5; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+.sspk { background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px 4px; color: #ccc; border-radius: 4px; transition: color 0.2s; }
+.sspk:hover { color: #555; }
+.sbody { padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; }
+.sexpr { font-family: 'Courier New', monospace; font-size: 13px; color: #222; line-height: 1.8; white-space: pre-wrap; background: #f8f9fa; border-radius: 8px; padding: 10px 12px; }
+.sexp { font-size: 12.5px; color: #555; line-height: 1.75; }
+
+.ans-card { background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 12px; padding: 12px 14px; display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ans-left { display: flex; align-items: flex-start; gap: 10px; }
+.ans-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.ans-lbl { font-size: 10px; color: #2e7d32; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; font-weight: 600; }
+.ans-val { font-family: 'Courier New', monospace; font-size: 13.5px; color: #1b5e20; line-height: 1.7; white-space: pre-wrap; font-weight: 600; }
+.read-all-btn { padding: 6px 13px; border-radius: 16px; border: 1.5px solid #4caf50; background: transparent; color: #2e7d32; font-size: 11px; cursor: pointer; font-family: inherit; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; font-weight: 600; }
+.read-all-btn:hover { background: #fff; }
+
+.ver-card { background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 12px; padding: 9px 13px; font-size: 12px; color: #666; line-height: 1.7; }
+.tip-card { background: #fffde7; border: 1px solid #f9a825; border-radius: 12px; padding: 9px 13px; font-size: 12px; color: #795548; line-height: 1.7; }
+.vals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.val-card { background: #f8f9fa; border: 1px solid #e8e8e8; border-radius: 10px; padding: 10px 12px; }
+.val-title { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 4px; }
+.val-eq { font-family: 'Courier New', monospace; font-size: 12.5px; color: #222; line-height: 1.65; white-space: pre-wrap; }
+.val-note { font-size: 11px; color: #aaa; margin-top: 4px; }
+.conv-bar { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+.conv-pill { font-size: 11px; padding: 2px 9px; border-radius: 10px; font-weight: 600; }
+.conv-yes { background: #e8f5e9; color: #2e7d32; }
+.conv-no { background: #ffebee; color: #c62828; }
+.conv-lbl { font-size: 11px; color: #aaa; }
+
+/* TYPING */
+.tdots { background: #fff; border: 1px solid #e8e8e8; border-radius: 4px 16px 16px 16px; padding: 12px 16px; display: flex; gap: 5px; align-items: center; }
+.td { width: 7px; height: 7px; border-radius: 50%; background: #ccc; animation: du 1.3s ease infinite; }
+.td:nth-child(2){animation-delay:.22s}.td:nth-child(3){animation-delay:.44s}
+@keyframes du{0%,60%,100%{transform:translateY(0);opacity:.3}30%{transform:translateY(-6px);opacity:1}}
+
+/* ATTACH PREVIEW */
+#attach-preview { display: none; align-items: center; gap: 8px; padding: 7px 14px; background: #f8f9fa; border-top: 1px solid #eee; flex-shrink: 0; flex-wrap: wrap; }
+.ap-chip { display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e0e0e0; border-radius: 10px; padding: 4px 10px; font-size: 12px; color: #444; }
+.ap-chip img { width: 30px; height: 30px; border-radius: 6px; object-fit: cover; }
+.ap-rm { cursor: pointer; color: #bbb; font-size: 14px; margin-left: 2px; }
+.ap-rm:hover { color: #e53935; }
+
+/* INPUT BAR */
+#inputbar { display: flex; gap: 8px; align-items: flex-end; padding: 11px 14px; border-top: 1px solid #eee; background: #fff; flex-shrink: 0; }
+#txt { flex: 1; resize: none; border: 1.5px solid #e0e0e0; border-radius: 22px; padding: 9px 15px; font-size: 13.5px; font-family: inherit; color: #222; background: #fafafa; outline: none; min-height: 40px; max-height: 110px; line-height: 1.5; transition: border-color 0.2s, background 0.2s; }
+#txt:focus { border-color: #1a73e8; background: #fff; }
+#txt::placeholder { color: #bbb; }
+.ibtn { width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid #e0e0e0; background: #fafafa; color: #666; cursor: pointer; font-size: 17px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: all 0.2s; }
+.ibtn:hover { background: #f0f0f0; color: #222; }
+.ibtn:disabled { opacity: 0.3; cursor: not-allowed; }
+#sendbtn { background: #1a73e8; border-color: #1a73e8; color: #fff; font-size: 18px; }
+#sendbtn:hover { background: #1557b0; }
+#micbtn.on { background: #ffebee; color: #e53935; border-color: #f5a5a5; }
+#file-input { display: none; }
+@media(max-width:540px){ body{padding:0;align-items:flex-start;} #app{height:100vh;max-height:100vh;border-radius:0;box-shadow:none;} }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div id="face">🧮</div>
+    <div id="hinfo">
+      <div id="hname">MathBot Ultimate</div>
+      <div id="hsub">Any problem · Any level · Class 1 to PhD</div>
+      <div id="hstatus"><span class="sdot" id="sdot"></span><span id="stxt">Ready</span></div>
+    </div>
+    <div id="hctrl">
+      <button class="hbtn on" id="vbtn" onclick="toggleVoice()">🔊 Voice</button>
+      <button id="spdbtn" onclick="cycleSpeed()">Normal</button>
+    </div>
+  </div>
+
+  <div id="wavebar">
+    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+    <div class="wb"></div><div class="wb"></div><div class="wb"></div>
+  </div>
+
+  <div id="qrow">
+    <button class="qb" onclick="qs('2 + 3 * 4 - 8 / 2')">BODMAS</button>
+    <button class="qb" onclick="qs('2x - 3y expression')">2x-3y</button>
+    <button class="qb" onclick="qs('x2 - 5x + 6 = 0')">Quadratic</button>
+    <button class="qb" onclick="qs('P=5000 R=8 T=3')">Simple Interest</button>
+    <button class="qb" onclick="qs('CP=800 SP=1000')">Profit/Loss</button>
+    <button class="qb" onclick="qs('area of circle radius 7')">Circle</button>
+    <button class="qb" onclick="qs('sides 5 12 find hypotenuse')">Pythagoras</button>
+    <button class="qb" onclick="qs('sin30 + cos60 + tan45')">Trigonometry</button>
+    <button class="qb" onclick="qs('x3 + 3x2 - 5x differentiate')">Calculus</button>
+    <button class="qb" onclick="qs('mean of 4 7 13 2 1')">Statistics</button>
+    <button class="qb" onclick="qs('zeta function s=2')">Riemann ζ</button>
+    <button class="qb" onclick="qs('euler number e formula')">Euler e</button>
+    <button class="qb" onclick="qs('fibonacci sequence first 10')">Fibonacci</button>
+    <button class="qb" onclick="qs('prime numbers up to 30')">Primes</button>
+    <button class="qb" onclick="qs('binomial theorem (a+b)3')">Binomial</button>
+    <button class="qb" onclick="qs('matrix [[2,3],[1,4]] determinant')">Matrix</button>
+  </div>
+
+  <div id="messages"></div>
+  <div id="attach-preview"></div>
+  <div id="inputbar">
+    <input type="file" id="file-input" accept="image/*,.pdf,.txt,.doc,.docx" multiple onchange="handleFiles(this.files)">
+    <button class="ibtn" onclick="document.getElementById('file-input').click()" title="Attach file or photo">📎</button>
+    <textarea id="txt" placeholder="Type any math problem…" rows="1"></textarea>
+    <button class="ibtn" id="micbtn" onclick="toggleMic()" title="Speak">🎤</button>
+    <button class="ibtn" id="sendbtn" onclick="sendMsg()" title="Send">➤</button>
+  </div>
+</div>
+
+<script>
+var msgsEl=document.getElementById('messages');
+var txtEl=document.getElementById('txt');
+var sendBtn=document.getElementById('sendbtn');
+var micBtn=document.getElementById('micbtn');
+var stxtEl=document.getElementById('stxt');
+var sdotEl=document.getElementById('sdot');
+var faceEl=document.getElementById('face');
+var wavebarEl=document.getElementById('wavebar');
+var attachPreviewEl=document.getElementById('attach-preview');
+var isBusy=false,voiceOn=true,speechRate=0.85,recog=null,isListening=false,waveTimer=null;
+var speeds=[{l:'Slow',r:0.7},{l:'Normal',r:0.85},{l:'Fast',r:1.05}];
+var speedIdx=1;
+var pendingFiles=[];
+
+// ── FILE HANDLING ──────────────────────────────────────────────────────────
+function handleFiles(files){
+  for(var i=0;i<files.length;i++){
+    var f=files[i];
+    var reader=new FileReader();
+    (function(file){
+      reader.onload=function(e){
+        pendingFiles.push({name:file.name,type:file.type,size:file.size,data:e.target.result});
+        renderAttachPreview();
+      };
+      if(file.type.startsWith('image/')){reader.readAsDataURL(file);}
+      else{reader.readAsText(file);}
+    })(f);
+  }
+  document.getElementById('file-input').value='';
+}
+function renderAttachPreview(){
+  if(!pendingFiles.length){attachPreviewEl.style.display='none';return;}
+  attachPreviewEl.style.display='flex';
+  attachPreviewEl.innerHTML='';
+  pendingFiles.forEach(function(f,idx){
+    var chip=document.createElement('div');chip.className='ap-chip';
+    if(f.type&&f.type.startsWith('image/')){
+      chip.innerHTML='<img src="'+f.data+'" alt="'+esc(f.name)+'"><span>'+esc(f.name.substring(0,18)+(f.name.length>18?'...':''))+'</span><span class="ap-rm" onclick="removeFile('+idx+')">✕</span>';
+    }else{
+      var icon=f.name.endsWith('.pdf')?'📄':f.name.endsWith('.txt')?'📝':'📎';
+      chip.innerHTML='<span style="font-size:17px">'+icon+'</span><span>'+esc(f.name.substring(0,18)+(f.name.length>18?'...':''))+'</span><span class="ap-rm" onclick="removeFile('+idx+')">✕</span>';
+    }
+    attachPreviewEl.appendChild(chip);
+  });
+}
+function removeFile(idx){pendingFiles.splice(idx,1);renderAttachPreview();}
+
+// ── VOICE ──────────────────────────────────────────────────────────────────
+function getBestVoice(){
+  var vs=window.speechSynthesis.getVoices();if(!vs.length)return null;
+  var names=['Daniel','Alex','Google US English','Samantha','Victoria','Karen'];
+  for(var i=0;i<names.length;i++){var v=vs.find(function(v){return v.name.indexOf(names[i])>=0;});if(v)return v;}
+  return vs.find(function(v){return /en/i.test(v.lang);})||vs[0]||null;
+}
+function startWave(){wavebarEl.style.opacity='1';var b=wavebarEl.querySelectorAll('.wb');waveTimer=setInterval(function(){b.forEach(function(b){b.style.height=(3+Math.random()*16)+'px';});},80);}
+function stopWave(){wavebarEl.style.opacity='0';clearInterval(waveTimer);wavebarEl.querySelectorAll('.wb').forEach(function(b){b.style.height='4px';});}
+function speak(text,onEnd){
+  if(!voiceOn||!window.speechSynthesis){if(onEnd)onEnd();return;}
+  window.speechSynthesis.cancel();
+  var clean=text.replace(/[*_~`#\[\]]/g,' ').replace(/\s+/g,' ').trim();
+  if(!clean){if(onEnd)onEnd();return;}
+  var utt=new SpeechSynthesisUtterance(clean);
+  var v=getBestVoice();if(v)utt.voice=v;
+  utt.rate=speechRate;utt.pitch=1.05;utt.volume=1;utt.lang='en-US';
+  utt.onstart=function(){faceEl.classList.add('thinking');setStatus('Speaking...',true);startWave();};
+  utt.onend=function(){faceEl.classList.remove('thinking');setStatus('Ready',false);stopWave();if(onEnd)onEnd();};
+  utt.onerror=function(){faceEl.classList.remove('thinking');setStatus('Ready',false);stopWave();if(onEnd)onEnd();};
+  window.speechSynthesis.speak(utt);
+}
+function speakAll(steps,intro,answer,tip){
+  if(!voiceOn)return;
+  window.speechSynthesis.cancel();
+  var q=[];
+  if(intro)q.push({text:intro,si:-1});
+  steps.forEach(function(s,i){q.push({text:'Step '+s.num+'. '+s.title+'. '+s.explanation+'. '+s.expression.replace(/\n/g,'. ').replace(/=/g,' equals '),si:i});});
+  if(answer)q.push({text:'Final answer. '+answer.replace(/=/g,' equals '),si:-2});
+  if(tip)q.push({text:'Remember. '+tip,si:-3});
+  var idx=0;var cards=document.querySelectorAll('.step-card');
+  function next(){if(idx>=q.length)return;var item=q[idx];cards.forEach(function(c){c.classList.remove('active-step');});if(item.si>=0&&cards[item.si])cards[item.si].classList.add('active-step');speak(item.text,function(){idx++;setTimeout(next,350);});}
+  setTimeout(next,200);
+}
+function toggleVoice(){voiceOn=!voiceOn;var b=document.getElementById('vbtn');b.textContent=voiceOn?'🔊 Voice':'🔇 Muted';b.className='hbtn'+(voiceOn?' on':'');if(!voiceOn){window.speechSynthesis.cancel();faceEl.classList.remove('thinking');stopWave();setStatus('Ready',false);}}
+function cycleSpeed(){speedIdx=(speedIdx+1)%speeds.length;speechRate=speeds[speedIdx].r;document.getElementById('spdbtn').textContent=speeds[speedIdx].l;}
+function toggleMic(){var SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return;if(isListening){if(recog)recog.stop();return;}window.speechSynthesis.cancel();recog=new SR();recog.lang='en-US';recog.continuous=false;recog.interimResults=false;recog.onstart=function(){isListening=true;micBtn.className='ibtn on';setStatus('Listening...',true);};recog.onresult=function(e){var s=e.results[0][0].transcript.trim();if(s){txtEl.value=s;sendMsg();}};recog.onend=function(){isListening=false;micBtn.className='ibtn';if(stxtEl.textContent==='Listening...')setStatus('Ready',false);};recog.onerror=function(){isListening=false;micBtn.className='ibtn';setStatus('Ready',false);};try{recog.start();}catch(e){isListening=false;micBtn.className='ibtn';}}
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+function nums(s){return(s.match(/-?\d+\.?\d*/g)||[]).map(Number);}
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function getTime(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});}
+function gcd(a,b){return b===0?a:gcd(b,a%b);}
+function primeF(n){var f=[],d=2,orig=n;while(d<=n){while(n%d===0){f.push(d);n/=d;}d++;}return f.length?f.join('x'):String(orig);}
+function isPrime(n){if(n<2)return false;for(var i=2;i<=Math.sqrt(n);i++)if(n%i===0)return false;return true;}
+
+function calcExpr(e){
+  try{
+    var s=String(e);
+    var t=[],n='';
+    for(var i=0;i<s.length;i++){
+      var c=s[i];
+      if(c===' '){if(n){t.push(n);n='';}continue;}
+      if('+-*/'.indexOf(c)>=0){if(n){t.push(n);n='';}if(c==='-'&&(t.length===0||'+-*/'.indexOf(t[t.length-1])>=0)){n='-';continue;}t.push(c);}
+      else n+=c;
+    }
+    if(n)t.push(n);
+    var r=parseFloat(t[0]);
+    for(var i=1;i<t.length;i+=2){var op=t[i],b=parseFloat(t[i+1]);if(op==='+')r+=b;else if(op==='-')r-=b;else if(op==='*')r*=b;else if(op==='/')r/=b;}
+    return parseFloat(r.toFixed(8));
+  }catch(ex){return 0;}
+}
+
+function mk(p,i,steps,a,v,t){return{problem:p,intro:i,steps:steps,answer:a,verify:v||'',tip:t||'',extra:null};}
+function st(n,type,title,rule,expr,expl){return{num:n,type:type,title:title,rule:rule,expression:expr,explanation:expl};}
+
+// ── SMART DETECTOR ────────────────────────────────────────────────────────
+function detect(q){
+  var s=q.trim(),l=s.toLowerCase();
+  // Advanced math topics
+  if(/\bzeta\b|riemann\s*zeta|zeta\s*function/i.test(l))return 'zeta';
+  if(/\beuler\b.*\bnumber\b|\bnumber\b.*\beuler\b|euler.*constant|euler.*e\b|\be\s*=\s*2\.71/i.test(l))return 'euler_e';
+  if(/fibonacci|fib\s*sequence/i.test(l))return 'fibonacci';
+  if(/prime.*number|list.*prime|primes.*up\s*to|sieve/i.test(l))return 'primes';
+  if(/binomial\s*theorem|\(a\+b\)[23456]|\(x\+y\)[23456]/i.test(l))return 'binomial';
+  if(/taylor\s*series|maclaurin/i.test(l))return 'taylor';
+  if(/fourier/i.test(l))return 'fourier';
+  if(/golden\s*ratio|phi\b|1\.618/i.test(l))return 'golden';
+  if(/log\s*\d|log\s*base|logarithm|ln\s*\d|natural\s*log/i.test(l))return 'logarithm';
+  if(/\bsin\^2\b|\bcos\^2\b|pythag.*identity|trig.*identity/i.test(l))return 'trig_identity';
+  if(/complex\s*number|\bimaginary\b|\bi\s*=\s*sqrt|-1\s*=\s*i/i.test(l))return 'complex';
+  if(/eigenvalue|eigen\s*vector/i.test(l))return 'eigen';
+  if(/determinant|det\s*\[|\bdet\b.*\[\[/i.test(l))return 'determinant';
+  if(/matrix.*\[\[.*\]\]|inverse.*matrix|transpose/i.test(l))return 'matrix';
+  if(/permutation|combination|\bnCr\b|\bnPr\b|factorial/i.test(l))return 'permcomb';
+  if(/probability|odds\s+of|chance\s+of|P\(|p\s*\(/i.test(l))return 'probability';
+  if(/\blimit\b|lim\s*x|as\s+x\s*(->|approaches|->)/i.test(l))return 'limit';
+  // Standard topics
+  if(/^[\d\s+\-*/().\^]+$/.test(s.replace(/\s/g,''))&&/[+\-*/]/.test(s)&&!/[a-zA-Z]/.test(s))return 'bodmas';
+  if(/\bCP\s*=.*SP\s*=|\bSP\s*=.*CP\s*=/i.test(s))return 'profit';
+  if(/\bMP\s*=|marked\s*price|discount\s*\d/i.test(s))return 'discount';
+  if(/\bVAT\b|\btax\s*\d/i.test(s))return 'vat';
+  if(/\bP\s*=.*\bR\s*=.*\bT\s*=/i.test(s)&&!/compound/i.test(s))return 'si';
+  if(/compound|\bCI\b/i.test(s))return 'ci';
+  if(/simple\s*interest/i.test(s))return 'si';
+  if(/\bmean\b|\baverage\b/i.test(l)&&/\d/.test(s))return 'mean';
+  if(/\bmedian\b/i.test(l)&&/\d/.test(s))return 'median';
+  if(/\bmode\b/i.test(l)&&/\d/.test(s))return 'mode';
+  if(/\bvariance\b/i.test(l)&&/\d/.test(s))return 'variance';
+  if(/(standard\s*dev|std\s*dev|\bSD\b)/i.test(s)&&/\d/.test(s))return 'sd';
+  if(/\brange\b.*\d/i.test(s))return 'range';
+  if(/\bHCF\b|highest\s*common/i.test(l))return 'hcf';
+  if(/\bLCM\b|lowest\s*common|least\s*common/i.test(l))return 'lcm';
+  if(/\d+\s*%\s*(of\s*)?\d+|\d+\s*percent.*\d/i.test(s))return 'percent';
+  if(/hypotenuse|pythagoras/i.test(l))return 'pythagoras';
+  if(/circle|circumference/i.test(l)&&/radius|r\s*=\s*\d/i.test(l))return 'circle';
+  if(/cylinder/i.test(l))return 'cylinder';
+  if(/sphere/i.test(l))return 'sphere';
+  if(/triangle/i.test(l)&&/(base|height|area)/i.test(l))return 'triangle';
+  if(/rectangle|rect/i.test(l))return 'rectangle';
+  if(/integrat/i.test(l))return 'integrate';
+  if(/differenti|d\/dx/i.test(l))return 'diff';
+  if(/(sin|cos|tan)\s*\d/i.test(s)&&!/differenti|integrat/i.test(l))return 'trig';
+  if(/(x2|x3|x4|x\^[234])/i.test(s)&&/=/.test(s))return 'quadratic';
+  if(/\d*x\s*[+\-]\s*\d.*=\s*\d|\d+x\s*=\s*\d/i.test(s)&&!/(x2|x3)/i.test(s))return 'linear';
+  if(/(x2|x3|x4|x\^[234])/i.test(s)&&!/=/.test(s))return 'diff';
+  if(/[a-zA-Z]/.test(s)&&!/=/.test(s))return 'expression';
+  if(/[\d]+\s*[+\-*/]\s*[\d]+/.test(s))return 'bodmas';
+  return 'expression';
+}
+
+// ── ADVANCED SOLVERS ───────────────────────────────────────────────────────
+
+function solveZeta(q){
+  var n=nums(q);
+  var s=n.length>0?n[0]:2;
+  var results={'2':'pi^2/6 = 1.6449340668...','3':'1.2020569031... (Apery constant, irrational)','4':'pi^4/90 = 1.0823232337...','6':'pi^6/945 = 1.0173430619...','8':'pi^8/9450 = 1.0040773561...','-1':'-1/12 (analytic continuation)','0':'-1/2 (analytic continuation)'};
+  var approx=0;
+  if(s>1){for(var i=1;i<=10000;i++)approx+=1/Math.pow(i,s);approx=parseFloat(approx.toFixed(10));}
+  return {
+    problem:'Riemann Zeta Function: zeta('+s+')',
+    intro:'The Riemann Zeta Function is defined as the infinite series: zeta(s) = 1/1^s + 1/2^s + 1/3^s + ... It converges for Re(s) > 1 and connects deeply to prime numbers.',
+    steps:[
+      st(1,'general','The Definition','zeta(s) = Sum 1/n^s from n=1 to infinity',
+        'zeta(s) = 1/1^s + 1/2^s + 1/3^s + 1/4^s + ...\n\n       = 1 + 1/2^s + 1/3^s + 1/4^s + ...','The zeta function sums the reciprocals of all positive integers each raised to the power s. This is an infinite series.'),
+      st(2,'general','Convergence Condition','Series converges only when Re(s) > 1',
+        'If Re(s) > 1  ->  Series converges (gives finite value)\nIf Re(s) = 1  ->  Harmonic series, DIVERGES to infinity\nIf Re(s) < 1  ->  Diverges (use analytic continuation)','For s = 1: zeta(1) = 1 + 1/2 + 1/3 + ... diverges. For s = 2: converges to pi^2/6.'),
+      st(3,'general','Evaluate zeta('+s+')','Substitute and compute',
+        'zeta('+s+') = 1/1^'+s+' + 1/2^'+s+' + 1/3^'+s+' + 1/4^'+s+' + ...\n\n'+(s>1?'Numerical approximation (10000 terms):\n= '+approx:'Use analytic continuation for s <= 1'),
+        s===2?'This equals pi^2/6. Proved by Euler in 1734 — the famous Basel Problem!':s===4?'This equals pi^4/90, another Euler result.':s>1?'Computed by summing the first 10000 terms of the series.':'For s <= 1, the series diverges. Analytic continuation extends the function.'),
+      st(4,'general','Euler Product Formula','Connection to prime numbers',
+        'zeta(s) = Product over all primes p:\n\nzeta(s) = 1/(1-2^-s) * 1/(1-3^-s) * 1/(1-5^-s) * 1/(1-7^-s) * ...\n\n       = Product [1/(1-p^-s)]  for every prime p','This remarkable formula by Euler shows zeta is an infinite product over ALL prime numbers!'),
+      st(5,'general','Special Values','Known exact results',
+        'zeta(2) = pi^2/6       = 1.6449340668...\nzeta(3) = 1.2020569031... (Apery, irrational, no pi formula)\nzeta(4) = pi^4/90      = 1.0823232337...\nzeta(-1) = -1/12       (analytic continuation)\nzeta(0)  = -1/2        (analytic continuation)','For even integers, Euler found closed forms involving pi. For odd integers like zeta(3), no such formula exists.'),
+      st(6,'general','The Riemann Hypothesis — $1 Million Prize','Greatest unsolved problem in math',
+        'Hypothesis (Riemann, 1859):\n"All non-trivial zeros of zeta(s) lie on\n the critical line  Re(s) = 1/2"\n\nVerified for: over 10 TRILLION zeros\nProved: NEVER\nStatus: UNSOLVED for 165+ years','This is one of the 7 Millennium Prize Problems. Solving it wins $1,000,000 from the Clay Mathematics Institute!')
+    ],
+    answer: results[String(s)] ? ('zeta('+s+') = '+results[String(s)]) : (s>1 ? 'zeta('+s+') ≈ '+approx+' (10000 terms)' : 'zeta('+s+') = defined via analytic continuation'),
+    verify: s===2?'Euler 1734: Sum of 1/n^2 = pi^2/6. Verified!':'',
+    tip:'The Riemann Hypothesis says all non-trivial zeros lie on Re(s) = 1/2. Solving it wins $1,000,000!'
+  };
+}
+
+function solveEulerE(q){
+  var e=2.718281828459045;
+  return mk('Euler number e = 2.71828...','The number e is one of the most important constants in mathematics, alongside pi. It is the base of natural logarithms and appears in growth, decay, probability, and complex analysis.',[
+    st(1,'general','Definition of e','Natural limit definition','e = lim(n->infinity) of (1 + 1/n)^n\n\nn=1:      (1+1/1)^1        = 2.000000\nn=10:     (1+1/10)^10      = 2.593742\nn=100:    (1+1/100)^100    = 2.704814\nn=1000:   (1+1/1000)^1000  = 2.716924\nn=inf:    ----------->     = 2.718282...','As n grows to infinity, (1 + 1/n)^n approaches e = 2.71828...'),
+    st(2,'general','Series Definition','Infinite sum formula','e = 1/0! + 1/1! + 1/2! + 1/3! + 1/4! + ...\n\n  = 1 + 1 + 1/2 + 1/6 + 1/24 + 1/120 + ...\n  = 1 + 1 + 0.5 + 0.1667 + 0.0417 + 0.0083 + ...\n  = 2.71828182845...','This series converges very quickly. Just 10 terms give 7 correct decimal places!'),
+    st(3,'general','The Special Property','Why e is unique','d/dx(e^x) = e^x\n\ne^x is the ONLY function that is its own derivative!\nAlso: integral of e^x = e^x + C\n\nThis makes e^x appear everywhere in differential equations.','No other base has this property. It makes e the natural choice for exponential functions.'),
+    st(4,'general','Euler\'s Identity','Most beautiful equation','e^(i*pi) + 1 = 0\n\nConnects 5 fundamental constants:\ne = 2.71828... (Euler number)\ni = sqrt(-1)  (imaginary unit)\npi = 3.14159...  (pi)\n1 = multiplicative identity\n0 = additive identity','Called the most beautiful equation in mathematics. It unifies analysis, trigonometry, and algebra in one formula.'),
+    st(5,'general','Applications','Where e appears','Compound interest:  A = P * e^(rt)\nNormal distribution: f(x) = e^(-x^2/2) / sqrt(2*pi)\nRadioactive decay:   N = N0 * e^(-lambda*t)\nComplex numbers:     e^(ix) = cos(x) + i*sin(x)','e appears naturally wherever continuous growth or decay occurs.')
+  ],'e = 2.718281828459045...','Verified: e^1 = 2.71828..., ln(e) = 1, d/dx(e^x) = e^x','Remember: e = 1 + 1 + 1/2 + 1/6 + 1/24 + ... The factorials grow fast so this converges quickly!');
+}
+
+function solveFibonacci(q){
+  var n=nums(q);var count=n.length>0?Math.min(Math.max(n[0],5),20):10;
+  var fib=[0,1];for(var i=2;i<count;i++)fib.push(fib[i-1]+fib[i-2]);
+  var ratios=fib.slice(2).map(function(v,i){return i>0?parseFloat((v/fib[i+1]).toFixed(6)):null;}).filter(function(v){return v!==null;});
+  return mk('Fibonacci Sequence: first '+count+' terms','The Fibonacci sequence is one of the most famous number patterns in mathematics and nature. Each number is the sum of the two before it.',
+    [st(1,'general','The Rule','Each term = sum of two previous','F(n) = F(n-1) + F(n-2)\nF(0) = 0, F(1) = 1\n\n0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55...','Starting from 0 and 1, each next number is the sum of the previous two.'),
+     st(2,'general','First '+count+' Terms','Generate the sequence',fib.join(', '),'The full sequence up to '+count+' terms.'),
+     st(3,'general','Ratio approaches Golden Ratio','F(n+1)/F(n) -> phi','Consecutive ratios:\n'+fib.slice(1,8).map(function(v,i){return fib[i+1]+'/'+fib[i]+(fib[i]>0?' = '+parseFloat((fib[i+1]/fib[i]).toFixed(6)):'');}).join('\n')+'\n-> phi = 1.6180339887...','The ratio of consecutive Fibonacci numbers converges to the Golden Ratio phi!'),
+     st(4,'general','Binet\'s Formula','Exact closed form','F(n) = [phi^n - psi^n] / sqrt(5)\n\nphi = (1+sqrt(5))/2 = 1.6180339...\npsi = (1-sqrt(5))/2 = -0.6180339...\n\nExample: F(10) = [1.618^10 - (-0.618)^10] / sqrt(5) = '+fib[10],'Binet\'s formula calculates any Fibonacci number directly without computing the sequence!'),
+     st(5,'general','In Nature','Where Fibonacci appears','Sunflower seeds: 34 and 55 spirals\nPinecone scales: 8 and 13 spirals\nRose petals: 5, 8, or 13\nShell spiral: Golden ratio\nGalaxy arms: logarithmic spiral','Fibonacci numbers appear throughout nature because they represent optimal packing and growth!')],
+  'Fibonacci sequence: '+fib.join(', '),'','The ratio F(n+1)/F(n) converges to the golden ratio phi = 1.6180339887...');
+}
+
+function solvePrimes(q){
+  var n=nums(q);var limit=n.length>0?Math.min(Math.max(n[0],10),200):30;
+  var primes=[];for(var i=2;i<=limit;i++)if(isPrime(i))primes.push(i);
+  return mk('Prime Numbers up to '+limit,'A prime number is a number greater than 1 that has no factors other than 1 and itself. Primes are the building blocks of all integers.',
+    [st(1,'general','Definition','What makes a prime?','A prime p has exactly two factors: 1 and p itself.\n\nPrime: 2, 3, 5, 7, 11 (only divisible by 1 and themselves)\nNot prime: 4=2x2, 6=2x3, 9=3x3, 15=3x5','1 is NOT prime by definition. 2 is the only even prime.'),
+     st(2,'general','Sieve of Eratosthenes','Most efficient method','1. Write all numbers from 2 to '+limit+'\n2. Start at 2. Cross out all multiples of 2 (4,6,8...)\n3. Next uncrossed: 3. Cross out multiples of 3 (9,15...)\n4. Next uncrossed: 5. Cross out multiples of 5...\n5. Continue until sqrt('+limit+') = '+parseFloat(Math.sqrt(limit).toFixed(1)),'All remaining uncrossed numbers are prime!'),
+     st(3,'general','Primes up to '+limit,'The complete list',primes.join(',  '),'Found '+primes.length+' prime numbers up to '+limit+'.'),
+     st(4,'general','Prime Number Theorem','How many primes?','Number of primes up to N ≈ N / ln(N)\n\nUp to '+limit+': approximately '+Math.round(limit/Math.log(limit))+' primes\nActual count: '+primes.length+'\n\nPrimes get sparser as numbers get larger.','The Prime Number Theorem gives an approximate count. Proved by Hadamard and de la Vallee Poussin in 1896.'),
+     st(5,'general','Fundamental Theorem of Arithmetic','Every number has unique prime factorization','Every integer > 1 is either prime OR can be written\nuniquely as a product of primes:\n\n12 = 2 x 2 x 3\n30 = 2 x 3 x 5\n100 = 2 x 2 x 5 x 5\n360 = 2 x 2 x 2 x 3 x 3 x 5','This is why primes are the "building blocks" of all numbers. Like atoms of arithmetic!')],
+  'Primes up to '+limit+': '+primes.join(', '),'Verified: '+primes.length+' primes found','The largest known prime (2024) has 41 million digits! Primes are infinite — proved by Euclid around 300 BC.');
+}
+
+function solveBinomial(q){
+  var n=nums(q);var power=n.length>0?Math.min(n[n.length-1],6):3;
+  function factN(n){if(n<=1)return 1;return n*factN(n-1);}
+  function C(n,r){return factN(n)/(factN(r)*factN(n-r));}
+  var terms=[];
+  for(var k=0;k<=power;k++){
+    var coeff=C(power,k);
+    var aExp=power-k,bExp=k;
+    var term=(coeff>1?coeff:'')+(aExp>0?('a'+(aExp>1?'^'+aExp:'')):'')+(bExp>0?('b'+(bExp>1?'^'+bExp:'')):'');
+    terms.push(term);
+  }
+  var coeffs=[];for(var k=0;k<=power;k++)coeffs.push(C(power,k));
+  return mk('Binomial Theorem: (a+b)^'+power,'The Binomial Theorem expands (a+b)^n into a sum of terms. Each term uses binomial coefficients from Pascal\'s Triangle.',
+    [st(1,'general','The Theorem','General formula','(a+b)^n = Sum [C(n,k) * a^(n-k) * b^k] for k=0 to n\n\nC(n,k) = n! / (k! * (n-k)!)  (binomial coefficient)','Each term combines a power of a, a power of b, and a binomial coefficient.'),
+     st(2,'general','Pascal\'s Triangle','Coefficients pattern','         1\n        1 1\n       1 2 1\n      1 3 3 1\n     1 4 6 4 1\n    1 5 10 10 5 1\n   1 6 15 20 15 6 1','Row n gives the coefficients for (a+b)^n. Each number is the sum of the two above it!'),
+     st(3,'general','Coefficients for n='+power,'C('+power+',0) to C('+power+','+power+')','k:    '+Array.from({length:power+1},function(_,i){return i;}).join('    ')+'\nC:    '+coeffs.join('    '),'These are the coefficients of each term in the expansion.'),
+     st(4,'general','Full Expansion','(a+b)^'+power,'(a+b)^'+power+' = '+terms.join(' + '),'Each term is: C('+power+',k) * a^('+power+'-k) * b^k for k = 0,1,2,...,'+power)],
+  '(a+b)^'+power+' = '+terms.join(' + '),'','Pascal\'s Triangle gives coefficients instantly: row n gives coefficients of (a+b)^n!');
+}
+
+function solveLogarithm(q){
+  var n=nums(q);var x=n.length>0?n[0]:100;var base=n.length>1?n[1]:10;
+  var result=parseFloat((Math.log(x)/Math.log(base)).toFixed(6));
+  var ln_x=parseFloat(Math.log(x).toFixed(6));
+  return mk('Logarithm: log base '+base+' of '+x,'A logarithm answers the question: "to what power must we raise the base to get x?" It is the inverse of exponentiation.',
+    [st(1,'general','Definition','What logarithm means','log_b(x) = y  means  b^y = x\n\nlog_10(100) = 2  because  10^2 = 100\nlog_10(1000) = 3 because  10^3 = 1000\nln(e) = 1        because  e^1 = e\nlog_2(8) = 3     because  2^3 = 8','The logarithm is the inverse (opposite) of exponentiation.'),
+     st(2,'general','Laws of Logarithms','Key rules to remember','1. log(a*b) = log(a) + log(b)\n2. log(a/b) = log(a) - log(b)\n3. log(a^n) = n * log(a)\n4. log_b(b) = 1\n5. log_b(1) = 0\n6. Change base: log_b(x) = ln(x) / ln(b)','These rules transform multiplication into addition — that\'s why logarithms were invented (before calculators)!'),
+     st(3,'general','Calculate log base '+base+' of '+x,'Using change of base','log_'+base+'('+x+') = ln('+x+') / ln('+base+')\n              = '+ln_x+' / '+parseFloat(Math.log(base).toFixed(6))+'\n              = '+result,'Change of base formula converts any logarithm using natural log.'),
+     st(4,'general','Natural Log vs Log base 10','Two common types','log_10(x) = common log = "log"\nln(x)     = natural log = log base e\n\nln('+x+')      = '+ln_x+'\nlog_10('+x+') = '+parseFloat((Math.log10(x)).toFixed(6))+'\n\nRelation: ln(x) = 2.302585 * log_10(x)','Natural log uses base e = 2.71828. Common log uses base 10. Both are widely used.')],
+  'log_'+base+'('+x+') = '+result,'Verify: '+base+'^'+result+' = '+parseFloat(Math.pow(base,result).toFixed(4))+' ≈ '+x+' ✓','Change of base: log_b(x) = ln(x)/ln(b). Works for any base!');
+}
+
+function solveComplex(q){
+  return mk('Complex Numbers: i = sqrt(-1)','Complex numbers extend the real number line to a 2D plane. Every complex number has a real part and an imaginary part: z = a + bi.',
+    [st(1,'general','Definition','What is i?','i = sqrt(-1)\ni^2 = -1\ni^3 = -i\ni^4 = 1  (then repeats: i, -1, -i, 1, i, -1...)\n\nComplex number: z = a + bi\nReal part: Re(z) = a\nImaginary part: Im(z) = b','The number i was invented to solve equations like x^2 = -1 which have no real solution.'),
+     st(2,'general','Arithmetic','Operations with complex numbers','Addition:       (a+bi) + (c+di) = (a+c) + (b+d)i\nSubtraction:    (a+bi) - (c+di) = (a-c) + (b-d)i\nMultiplication: (a+bi)(c+di) = (ac-bd) + (ad+bc)i\nDivision:       (a+bi)/(c+di) = multiply by conjugate\n\nExample: (2+3i)(1-2i) = (2+6) + (-4+3)i = 8 - i','Key: i^2 = -1. Use this to simplify products.'),
+     st(3,'general','Modulus and Argument','Polar form','Modulus: |z| = sqrt(a^2 + b^2)  (distance from origin)\nArgument: arg(z) = arctan(b/a)  (angle)\n\nPolar form: z = r*(cos(theta) + i*sin(theta))\n          = r * e^(i*theta)   [Euler\'s form]\n\nExample: |3+4i| = sqrt(9+16) = sqrt(25) = 5','Every complex number is a point on the 2D complex plane.'),
+     st(4,'general','Euler\'s Formula','Most beautiful result','e^(i*theta) = cos(theta) + i*sin(theta)\n\nWhen theta = pi:\ne^(i*pi) = cos(pi) + i*sin(pi) = -1 + 0 = -1\n\nTherefore: e^(i*pi) + 1 = 0\n\nThis is Euler\'s Identity — often called the\n"most beautiful equation in mathematics"','This connects e, i, pi, 1 and 0 in one equation!')],
+  'i = sqrt(-1),  z = a+bi,  |z| = sqrt(a^2+b^2),  e^(i*pi)+1=0','','i cycles: i, i^2=-1, i^3=-i, i^4=1, then repeats!');
+}
+
+function solveGolden(q){
+  var phi=1.6180339887;
+  return mk('Golden Ratio: phi = 1.6180339887...','The Golden Ratio phi appears throughout nature, art, architecture, and mathematics. It is the most irrational of all irrational numbers.',
+    [st(1,'general','Definition','What is phi?','phi = (1 + sqrt(5)) / 2 = 1.6180339887...\n\nThe Golden Ratio satisfies:\n  phi^2 = phi + 1\n  1/phi = phi - 1\n\nSo: phi^2 - phi - 1 = 0  (quadratic!)','Phi is the positive root of x^2 - x - 1 = 0.'),
+     st(2,'general','Connection to Fibonacci','Fibonacci ratios -> phi','F(n+1)/F(n) approaches phi:\n1/1=1.000, 2/1=2.000, 3/2=1.500\n5/3=1.667, 8/5=1.600, 13/8=1.625\n21/13=1.615, 34/21=1.619, 55/34=1.618...\n-> phi = 1.6180339887...','The Fibonacci sequence and golden ratio are intimately connected!'),
+     st(3,'general','In Nature and Art','Where phi appears','Nautilus shell spiral\nSunflower seed patterns\nHuman body proportions\nParthenon (Athens) dimensions\nDNA molecule: 34A x 21A = phi\nGalaxy spiral arms','Phi appears wherever optimal growth and aesthetics combine.'),
+     st(4,'general','Golden Rectangle','Geometric property','A rectangle where width/height = phi\nIf you remove a square from it,\nthe remaining rectangle is also golden!\n\nThis can repeat forever -> Golden Spiral\n\nCoordinates of regular pentagon use phi.','The golden rectangle creates an infinite spiral — found in shells, galaxies, and hurricanes!')],
+  'phi = (1+sqrt(5))/2 = 1.6180339887...','phi^2 = 2.618... = phi + 1 ✓','phi = 1 + 1/(1 + 1/(1 + 1/(1 + ...))) — a continued fraction of all ones!');
+}
+
+function solveProbability(q){
+  var n=nums(q);
+  return mk('Probability','Probability measures how likely an event is to occur. It ranges from 0 (impossible) to 1 (certain).',
+    [st(1,'general','Basic Definition','P = favourable / total','P(event) = Number of favourable outcomes\n           / Total number of possible outcomes\n\nRange: 0 <= P <= 1\nP=0: impossible event\nP=1: certain event\nP=0.5: equally likely to happen or not','Probability is always between 0 and 1 (or 0% to 100%).'),
+     st(2,'general','Rules','Key probability laws','1. P(not A) = 1 - P(A)         [Complement]\n2. P(A or B) = P(A)+P(B)-P(A and B)  [Addition]\n3. P(A and B) = P(A) * P(B/A)   [Multiplication]\n4. If A,B independent: P(A and B) = P(A)*P(B)\n5. Sum of all probabilities = 1','These rules let you calculate complex probabilities.'),
+     st(3,'general','Common Examples','Standard calculations','Coin toss: P(Heads) = 1/2 = 0.5\nDice: P(6) = 1/6 = 0.1667\nDice: P(even) = 3/6 = 1/2\nCards: P(Ace) = 4/52 = 1/13\nCards: P(Heart) = 13/52 = 1/4','Each of these uses: P = favourable outcomes / total outcomes.'),
+     st(4,'general','Conditional Probability','P(A given B)','P(A|B) = P(A and B) / P(B)\n\nExample: Box has 3 red, 2 blue balls.\nPick 2 without replacement:\nP(both red) = (3/5) * (2/4) = 6/20 = 0.3\n\nBayes Theorem: P(A|B) = P(B|A)*P(A) / P(B)','Conditional probability is the chance of A happening given that B has already happened.')],
+  'P(event) = favourable outcomes / total outcomes','','Probability range: 0 = impossible, 1 = certain. All probabilities sum to 1!');
+}
+
+function solvePermComb(q){
+  var n=nums(q);var nn=n[0]||5,r=n[1]||3;
+  function fact(x){if(x<=1)return 1;return x*fact(x-1);}
+  var perm=fact(nn)/fact(nn-r);
+  var comb=fact(nn)/(fact(r)*fact(nn-r));
+  return mk('Permutations and Combinations: n='+nn+', r='+r,'Permutations count arrangements where ORDER matters. Combinations count selections where ORDER does not matter.',
+    [st(1,'general','Permutations — ORDER matters','P(n,r) = n!/(n-r)!','P('+nn+','+r+') = '+nn+'! / ('+nn+'-'+r+')!\n      = '+nn+'! / '+( nn-r)+'!\n      = '+Array.from({length:r},function(_,i){return nn-i;}).join(' x ')+'\n      = '+perm,'Example: arrange '+r+' people from '+nn+' in a line. ORDER matters (ABC != BAC).'),
+     st(2,'general','Combinations — ORDER doesn\'t matter','C(n,r) = n! / (r!(n-r)!)','C('+nn+','+r+') = '+nn+'! / ('+r+'! x '+(nn-r)+'!)\n      = '+fact(nn)+' / ('+fact(r)+' x '+fact(nn-r)+')\n      = '+comb,'Example: choose '+r+' people from '+nn+' for a team. ORDER does not matter (ABC = BAC).'),
+     st(3,'general','Factorials needed','Calculate each',''+nn+'! = '+fact(nn)+'\n'+r+'! = '+fact(r)+'\n'+(nn-r)+'! = '+fact(nn-r),'n! = n x (n-1) x (n-2) x ... x 2 x 1'),
+     st(4,'general','Key difference','When to use which','Permutation: arranging, ordering, ranking\n  -> P('+nn+','+r+') = '+perm+'\n\nCombination: choosing, selecting, grouping\n  -> C('+nn+','+r+') = '+comb+'\n\nAlways: P(n,r) = r! x C(n,r)','If order matters, use P. If order does not matter, use C. C is always smaller than P.')],
+  'P('+nn+','+r+') = '+perm+',  C('+nn+','+r+') = '+comb,'Verify: P/C = '+perm+'/'+comb+' = '+fact(r)+'! = '+r+'! ✓','Rule of thumb: ordered selection = Permutation. Unordered selection = Combination.');
+}
+
+function solveLimit(q){
+  var n=nums(q);var a=n.length>0?n[0]:0;
+  return mk('Limits in Calculus','A limit describes the value a function approaches as x gets closer and closer to some value. Limits are the foundation of all of calculus.',
+    [st(1,'general','Definition','What a limit means','lim(x->a) f(x) = L\n\nMeans: as x gets closer to a (without reaching it),\nf(x) gets closer and closer to L.\n\nExample: lim(x->2) of x^2 = 4\n(substitute x=2 directly: 2^2 = 4)','We are asking: what value does f(x) APPROACH, not necessarily reach?'),
+     st(2,'general','Types of Limits','Direct and Indeterminate','Direct substitution works: lim(x->3) of 2x+1 = 7\n\nIndeterminate forms (need more work):\n0/0, inf/inf, 0*inf, inf-inf, 0^0\n\nExample: lim(x->0) of sin(x)/x = 1  [famous limit!]\nExample: lim(x->1) of (x^2-1)/(x-1) = 2','When direct substitution gives 0/0 or inf/inf, use L\'Hopital\'s rule or factoring.'),
+     st(3,'general','L\'Hopital\'s Rule','For 0/0 or inf/inf forms','If lim f(x)/g(x) gives 0/0 or inf/inf:\n\nlim f(x)/g(x) = lim f\'(x)/g\'(x)\n\nExample: lim(x->0) of sin(x)/x\n= lim cos(x)/1  [differentiate top and bottom]\n= cos(0) = 1','Differentiate numerator and denominator separately, then take the limit again.'),
+     st(4,'general','Famous Limits','Must-know results','lim(x->0) sin(x)/x = 1\nlim(x->0) (1-cos(x))/x = 0\nlim(x->inf) (1+1/x)^x = e = 2.71828...\nlim(x->0) (e^x-1)/x = 1\nlim(x->inf) x*sin(1/x) = 1','These standard limits appear repeatedly in calculus and are worth memorising.')],
+  'lim(x->'+a+') f(x) = substitute x='+a+' if no 0/0 form; otherwise use L\'Hopital or factor','','Key: if direct substitution gives 0/0, factor the expression or use L\'Hopital\'s Rule!');
+}
+
+// ── STANDARD SOLVERS ───────────────────────────────────────────────────────
+function solveExpression(q){
+  var s=q.trim();var vars=s.match(/[a-zA-Z]/g);var uv=vars?[...new Set(vars)]:[];
+  return mk(s,'This is an algebraic expression with variable'+(uv.length!==1?'s':'')+': '+uv.join(', ')+'. An expression has no equals sign — it cannot be solved, only evaluated or simplified.',
+    [st(1,'general','This is an EXPRESSION — not an equation','No equals sign',s,'An expression shows a relationship between variables. It cannot be solved for a specific value without substituting numbers.'),
+     st(2,'general','Identify each term','Coefficients and variables','Each term = coefficient (number) x variable (letter).\nExample: 2x means 2 times x. 3y means 3 times y.\n\nIn "'+s+'":\n'+uv.map(function(v){return 'Variable: '+v;}).join('\n'),'To evaluate: substitute numerical values for each variable.'),
+     st(3,'general','What you can do with this expression','Options',uv.length>1?'1. Substitute values: if x=2, y=1, evaluate\n2. Add = to make equation: '+s+' = 0\n3. Factor if possible\n4. Differentiate or integrate terms':'1. Differentiate: d/dx['+s+']\n2. Integrate: integral of ('+s+')dx\n3. Substitute x = a number\n4. Set equal to 0 to find roots','Expressions are building blocks — they become equations when you add an equals sign and a value.')],
+  s+' is an expression. Substitute values to evaluate it.','','To SOLVE: add = sign. Example: '+s+' = 0, then find the variable value.');
+}
+
+function solveBODMAS(expr){
+  var clean=expr;
+  var steps=[];var cur=clean;
+  var bm=cur.match(/\(([^()]+)\)/);
+  if(bm){var v=calcExpr(bm[1]);var ne=cur.replace(bm[0],String(v));steps.push(st(1,'bracket','Brackets First (B)','B in BODMAS',cur+'\n= '+ne,'Solve inside brackets: '+bm[1]+' = '+v));cur=ne;}
+  var pm=cur.match(/([\d.]+)\^([\d.]+)/);
+  if(pm){var pv=Math.pow(parseFloat(pm[1]),parseFloat(pm[2]));var ne=cur.replace(pm[0],String(pv));steps.push(st(steps.length+1,'order','Powers/Orders (O)','O in BODMAS',cur+'\n= '+ne,pm[1]+'^'+pm[2]+' = '+pv));cur=ne;}
+  var t=tokenizeE(cur),ch=true;
+  while(ch){ch=false;for(var i=1;i<t.length-1;i+=2){if(t[i]==='/'){var a=parseFloat(t[i-1]),b=parseFloat(t[i+1]),v=parseFloat((a/b).toFixed(8));var bf=t.join(' ');t.splice(i-1,3,v);steps.push(st(steps.length+1,'division','Division (D)','D before M,A,S',bf+'\n= '+t.join(' '),a+' / '+b+' = '+v));ch=true;break;}}}
+  ch=true;while(ch){ch=false;for(var i=1;i<t.length-1;i+=2){if(t[i]==='*'){var a=parseFloat(t[i-1]),b=parseFloat(t[i+1]),v=parseFloat((a*b).toFixed(8));var bf=t.join(' ');t.splice(i-1,3,v);steps.push(st(steps.length+1,'multiplication','Multiplication (M)','M before A,S',bf+'\n= '+t.join(' '),a+' x '+b+' = '+v));ch=true;break;}}}
+  ch=true;while(ch){ch=false;for(var i=1;i<t.length-1;i+=2){if(t[i]==='+'){var a=parseFloat(t[i-1]),b=parseFloat(t[i+1]),v=parseFloat((a+b).toFixed(8));var bf=t.join(' ');t.splice(i-1,3,v);steps.push(st(steps.length+1,'addition','Addition (A)','A before S',bf+'\n= '+t.join(' '),a+' + '+b+' = '+v));ch=true;break;}}}
+  ch=true;while(ch){ch=false;for(var i=1;i<t.length-1;i+=2){if(t[i]==='-'){var a=parseFloat(t[i-1]),b=parseFloat(t[i+1]),v=parseFloat((a-b).toFixed(8));var bf=t.join(' ');t.splice(i-1,3,v);steps.push(st(steps.length+1,'subtraction','Subtraction (S)','Last operation',bf+'\n= '+t.join(' '),a+' - '+b+' = '+v));ch=true;break;}}}
+  var ans=t[0];
+  if(!steps.length)steps.push(st(1,'general','Calculate','',expr+' = '+ans,'Result = '+ans));
+  return mk(expr,'Solving using BODMAS: Brackets, Orders, Division, Multiplication, Addition, Subtraction.',steps,expr+' = '+ans,'','BODMAS order ensures everyone gets the same answer to the same arithmetic expression!');
+}
+function tokenizeE(e){var t=[],n='';for(var i=0;i<e.length;i++){var c=e[i];if(c===' '){if(n){t.push(n);n='';}continue;}if('+-*/'.indexOf(c)>=0){if(n){t.push(n);n='';}if(c==='-'&&(t.length===0||'+-*/'.indexOf(t[t.length-1])>=0)){n='-';continue;}t.push(c);}else n+=c;}if(n)t.push(n);return t;}
+
+function solveSI(q){var n=nums(q);var P=n[0]||1000,R=n[1]||10,T=n[2]||2;var SI=parseFloat((P*R*T/100).toFixed(2)),A=parseFloat((P+SI).toFixed(2));return mk(q,'Simple Interest: the same interest is earned every year on the original principal.',[st(1,'general','Formula SI = PRT/100','',('P = Rs '+P+'\nR = '+R+'%\nT = '+T+' years\nSI = P x R x T / 100'),'Three values: Principal, Rate per year, Time in years.'),st(2,'multiplication','Multiply P x R x T','Numerator',(P+' x '+R+' x '+T+' = '+(P*R*T)),'Numerator = '+(P*R*T)),st(3,'division','Divide by 100','SI = PRT/100',('SI = '+(P*R*T)+' / 100\nSI = Rs '+SI),'Simple Interest = Rs '+SI),st(4,'addition','Amount = P + SI','Total',(P+' + '+SI+' = Rs '+A),'Total Amount = Rs '+A)],'SI = Rs '+SI+',  Amount = Rs '+A,'Per year: Rs '+(P*R/100)+' x '+T+' = Rs '+SI+' ✓','SI grows linearly — same amount every year. CI grows exponentially.');}
+function solveCI(q){var n=nums(q);var P=n[0]||10000,R=n[1]||8,T=n[2]||3;var A=parseFloat((P*Math.pow(1+R/100,T)).toFixed(2)),CI=parseFloat((A-P).toFixed(2));return mk(q,'Compound Interest: each year interest is added to principal, so the base grows.',[st(1,'general','Formula A = P(1+R/100)^n','',(P+'(1+'+R+'/100)^'+T),'The power n causes compounding.'),st(2,'bracket','Brackets: (1+R/100)','B first','(1+'+R+'/100) = '+(1+R/100),'Growth factor = '+(1+R/100)),st(3,'order','Raise to power n','Compound',parseFloat((1+R/100).toFixed(4))+'^'+T+' = '+parseFloat(Math.pow(1+R/100,T).toFixed(6)),'Compounded over '+T+' years.'),st(4,'multiplication','A = P x factor','',P+' x '+parseFloat(Math.pow(1+R/100,T).toFixed(6))+' = Rs '+A,'Amount = Rs '+A),st(5,'subtraction','CI = A - P','',A+' - '+P+' = Rs '+CI,'Interest = Rs '+CI)],'CI = Rs '+CI+',  Amount = Rs '+A,'SI would give Rs '+(P*R*T/100)+'. CI gives Rs '+CI,'CI compounds — interest earns further interest!');}
+function solvePL(q){var n=nums(q);var CP=n[0]||500,SP=n[1]||650;var isPro=SP>CP,diff=Math.abs(SP-CP),pct=parseFloat((diff/CP*100).toFixed(2));return mk(q,'CP = cost to buy. SP = selling price. SP '+(isPro?'>':'<')+' CP = '+(isPro?'PROFIT':'LOSS')+'.',[st(1,'general','Compare CP and SP','',('CP = Rs '+CP+'\nSP = Rs '+SP+'\n-> '+(isPro?'PROFIT':'LOSS')),(isPro?'SP > CP: profit.':'CP > SP: loss.')),st(2,'subtraction',(isPro?'Profit = SP - CP':'Loss = CP - SP'),'',(isPro?SP+' - '+CP:CP+' - '+SP)+' = Rs '+diff,'Amount = Rs '+diff),st(3,'division',(isPro?'Profit':'Loss')+'% = Amount/CP x 100','Always on CP','('+diff+'/'+CP+') x 100 = '+pct+'%','Percentage = '+pct+'%')],(isPro?'Profit':'Loss')+' = Rs '+diff+',  '+(isPro?'Profit':'Loss')+'% = '+pct+'%',CP+(isPro?'+':'-')+diff+' = '+(isPro?CP+diff:CP-diff),'Always calculate profit/loss% on COST PRICE!');}
+function solveDiscount(q){var n=nums(q);var MP=n[0]||1200,d=n[1]||25;var dA=parseFloat((MP*d/100).toFixed(2)),SP=parseFloat((MP-dA).toFixed(2));return mk(q,'Discount on Marked Price.',[st(1,'multiplication','Discount = MP x Rate / 100','',MP+' x '+d+' / 100 = Rs '+dA,'Discount = Rs '+dA),st(2,'subtraction','SP = MP - Discount','',MP+' - '+dA+' = Rs '+SP,'SP = Rs '+SP)],'Discount = Rs '+dA+',  SP = Rs '+SP,'','Discount on MP. Profit/Loss on CP.');}
+function solveVAT(q){var n=nums(q);var p=n[0]||2500,v=n[1]||13;var va=parseFloat((p*v/100).toFixed(2)),tot=parseFloat((p+va).toFixed(2));return mk(q,'VAT = '+v+'% tax added to price.',[st(1,'multiplication','VAT = Price x Rate/100','',p+' x '+v+'/100 = Rs '+va,'Tax = Rs '+va),st(2,'addition','Total = Price + VAT','',p+' + '+va+' = Rs '+tot,'Total = Rs '+tot)],'VAT = Rs '+va+',  Total = Rs '+tot,'','Total = Price x 1.'+v+' for '+v+'% VAT');}
+function solveCircle(q){var r=nums(q)[0]||7;var area=parseFloat((Math.PI*r*r).toFixed(4)),circ=parseFloat((2*Math.PI*r).toFixed(4));return mk(q,'Circle: Area = pi*r^2, Circumference = 2*pi*r.',[st(1,'order','r^2 first','Powers before x','r^2 = '+r+'^2 = '+(r*r),'Square radius first.'),st(2,'multiplication','Area = pi x r^2','',('3.14159 x '+(r*r)+' = '+area),'Area = '+area+' sq units.'),st(3,'multiplication','C = 2 x pi x r','',('2 x 3.14159 x '+r+' = '+circ),'C = '+circ+' units.')],'Area = '+area+' sq units,  C = '+circ+' units','','Doubling radius -> area 4x bigger!');}
+function solveTriangle(q){var n=nums(q);var b=n[0]||10,h=n[1]||6;return mk(q,'Triangle Area = 1/2 x base x height.',[st(1,'multiplication','b x h','',b+' x '+h+' = '+(b*h),'Multiply base and height.'),st(2,'division','Divide by 2','Area = (bxh)/2',''+(b*h)+'/2 = '+(b*h/2),'Area = '+(b*h/2)+' sq units.')],'Area = '+(b*h/2)+' sq units','','Height must be perpendicular to base!');}
+function solvePyth(q){var n=nums(q);var a=n[0]||3,b=n[1]||4;var c=parseFloat(Math.sqrt(a*a+b*b).toFixed(4));return mk(q,'Pythagoras: c^2 = a^2 + b^2 (right-angled triangles).',[st(1,'order','Square both sides','a^2 and b^2',a+'^2 = '+(a*a)+',  '+b+'^2 = '+(b*b),'Square each.'),st(2,'addition','c^2 = a^2 + b^2','Sum',(a*a)+' + '+(b*b)+' = '+(a*a+b*b),'c^2 = '+(a*a+b*b)),st(3,'order','c = sqrt(c^2)','Root','c = sqrt('+(a*a+b*b)+') = '+c,'Hypotenuse = '+c+' units.')],'Hypotenuse = '+c+' units',a+'^2+'+b+'^2='+(a*a+b*b)+'='+c+'^2 ✓','Triples: 3-4-5, 5-12-13, 8-15-17.');}
+function solveCylinder(q){var n=nums(q);var r=n[0]||5,h=n[1]||10;var vol=parseFloat((Math.PI*r*r*h).toFixed(4));return mk(q,'Cylinder Volume = pi*r^2*h.',[st(1,'order','r^2','',r+'^2 = '+(r*r),'Square radius.'),st(2,'multiplication','V = pi*r^2*h','','3.14159 x '+(r*r)+' x '+h+' = '+vol,'V = '+vol+' cubic units.')],'Volume = '+vol+' cubic units','','SA = 2*pi*r*(r+h)');}
+function solveSphere(q){var r=nums(q)[0]||6;var vol=parseFloat(((4/3)*Math.PI*r*r*r).toFixed(4)),sa=parseFloat((4*Math.PI*r*r).toFixed(4));return mk(q,'Sphere: V=(4/3)*pi*r^3,  SA=4*pi*r^2.',[st(1,'order','r^3','',r+'^3 = '+(r*r*r),'Cube radius.'),st(2,'multiplication','V = (4/3)*pi*r^3','',(4/3)+' x 3.14159 x '+(r*r*r)+' = '+vol,'V = '+vol),st(3,'multiplication','SA = 4*pi*r^2','','4 x 3.14159 x '+(r*r)+' = '+sa,'SA = '+sa)],'V = '+vol+',  SA = '+sa,'','Sphere: max volume for min surface area!');}
+function solveRect(q){var n=nums(q);var l=n[0]||12,w=n[1]||8;return mk(q,'Rectangle: Area=l*w,  Perimeter=2(l+w).',[st(1,'multiplication','Area = l x w','',l+' x '+w+' = '+(l*w),'Area = '+(l*w)),st(2,'addition','P = 2(l+w)','','2x('+l+'+'+w+') = '+(2*(l+w)),'P = '+(2*(l+w)))],'Area = '+(l*w)+',  P = '+(2*(l+w)),'','Opposite sides equal!');}
+function solveQuad(q){var ma=q.match(/(-?\d*\.?\d*)\s*x[23\^]/i);var mb=q.match(/([+\-]?\s*\d*\.?\d+)\s*x(?![23\^])/i);var mc=q.match(/=\s*(-?\d+\.?\d*)/);var a=ma?(parseFloat(ma[1])||1):1;var b=mb?parseFloat(mb[1].replace(/\s/g,'')):0;var c=mc?-parseFloat(mc[1]):0;var D=b*b-4*a*c;var sqD=Math.sqrt(Math.abs(D));var roots;if(D>0){var r1=parseFloat(((-b+sqD)/(2*a)).toFixed(4)),r2=parseFloat(((-b-sqD)/(2*a)).toFixed(4));roots='x = '+r1+'  or  x = '+r2;}else if(D===0){roots='x = '+parseFloat((-b/(2*a)).toFixed(4))+' (equal roots)';}else roots='No real roots (D < 0)';return mk(q,'Quadratic equation ax^2+bx+c=0. Using quadratic formula.',[st(1,'general','Identify a,b,c','ax^2+bx+c=0','a='+a+',  b='+b+',  c='+c,'Compare with standard form.'),st(2,'general','D = b^2 - 4ac','Discriminant','D = '+b+'^2 - 4x'+a+'x'+c+' = '+b*b+' - '+(4*a*c)+' = '+D+'\n-> '+(D>0?'2 real roots':D===0?'equal roots':'no real roots'),'D = '+D),st(3,'general','x = (-b +/- sqrt(D)) / 2a','Quadratic formula','x = (-'+b+' +/- sqrt('+D+')) / '+(2*a)+'\n= ('+(0-b)+' +/- '+sqD.toFixed(4)+') / '+(2*a)+'\n\n'+roots,''+roots)],''+roots,'','D>0: 2 roots. D=0: equal. D<0: complex.');}
+function solveLinear(q){
+  // Detect variable name (x, t, y, n, etc.)
+  var varMatch = q.match(/[a-zA-Z]/);
+  var varName = varMatch ? varMatch[0] : 'x';
+  var re = new RegExp(varName,'gi');
+
+  // Split on =
+  var parts = q.split('=');
+  if(parts.length < 2) return solveExpression(q);
+  var lhs = parts[0].trim();
+  var rhs = parts[1].trim();
+
+  // Parse coefficients of variable and constants from each side
+  // Returns {coeff, constant} for an expression like "16 - 2t" or "5t + 9"
+  function parseSide(expr, vname){
+    var coeff = 0, constant = 0;
+    // Normalise: ensure leading +/- is captured
+    var e = expr.replace(/\s+/g,'');
+    // Add + at start if doesn't start with -
+    if(e[0] !== '-') e = '+' + e;
+    // Find all terms: sign + number + optional variable
+    var termRe = /([+\-])(\d*\.?\d*)([a-zA-Z]?)/g;
+    var match;
+    while((match = termRe.exec(e)) !== null){
+      var sign = match[1] === '-' ? -1 : 1;
+      var numStr = match[2];
+      var hasVar = match[3].toLowerCase() === vname.toLowerCase();
+      var num = numStr === '' ? 1 : parseFloat(numStr);
+      if(isNaN(num)) num = 1;
+      if(hasVar){
+        coeff += sign * num;
+      } else {
+        if(numStr !== '') constant += sign * num;
+      }
+    }
+    return {coeff: coeff, constant: constant};
+  }
+
+  var L = parseSide(lhs, varName);
+  var R = parseSide(rhs, varName);
+
+  // ax + b = cx + d  =>  (a-c)x = d-b
+  var netCoeff = L.coeff - R.coeff;
+  var netConst = R.constant - L.constant;
+
+  if(netCoeff === 0){
+    return mk(q,'Linear equation with variable '+varName+'.',
+      [st(1,'general','No solution or infinite solutions','',
+        lhs+' = '+rhs+'\n'+L.coeff+varName+' - '+R.coeff+varName+' = '+R.constant+' - '+L.constant+'\n0 = '+( netConst),
+        netConst===0?'0=0: Infinitely many solutions!':'0='+netConst+': No solution (contradiction).')],
+      netConst===0?'Infinitely many solutions':'No solution','','');
+  }
+
+  var answer = parseFloat((netConst/netCoeff).toFixed(6));
+
+  // Build explanation steps
+  var steps = [];
+
+  steps.push(st(1,'general','Write the equation clearly','Original equation',
+    lhs + ' = ' + rhs,
+    'We need to collect all terms with '+varName+' on one side and all numbers on the other side.'));
+
+  // Step 2: move variable terms
+  var lhsVarStr = L.coeff !== 0 ? (L.coeff === 1 ? varName : (L.coeff === -1 ? '-'+varName : L.coeff+varName)) : '0';
+  var rhsVarStr = R.coeff !== 0 ? (R.coeff === 1 ? varName : (R.coeff === -1 ? '-'+varName : R.coeff+varName)) : '0';
+  var lhsConstStr = L.constant !== 0 ? (L.constant > 0 ? ' + '+L.constant : ' - '+Math.abs(L.constant)) : '';
+  var rhsConstStr = R.constant !== 0 ? (R.constant > 0 ? ' + '+R.constant : ' - '+Math.abs(R.constant)) : '';
+
+  steps.push(st(2,'subtraction',
+    'Move all '+varName+' terms to LEFT side','Subtract '+rhsVarStr+' from both sides',
+    lhs + ' = ' + rhs +
+    '\n\nSubtract ('+rhsVarStr+') from both sides:' +
+    '\n'+lhsVarStr+lhsConstStr+' - ('+rhsVarStr+') = '+rhsConstStr+
+    '\n'+(L.coeff-R.coeff)+varName+lhsConstStr+' = '+rhsConstStr,
+    'Moving '+rhsVarStr+' to the left eliminates the variable from the right side. Left coefficient: '+L.coeff+' - ('+R.coeff+') = '+netCoeff));
+
+  steps.push(st(3,'addition',
+    'Move all numbers to RIGHT side','Move constants',
+    netCoeff+varName+lhsConstStr+' = '+( R.constant !== 0 ? R.constant : '0') +
+    '\n\nSubtract ('+L.constant+') from both sides:'+
+    '\n'+netCoeff+varName+' = '+(R.constant - L.constant),
+    'Moving '+L.constant+' to the right: right side becomes '+R.constant+' - ('+L.constant+') = '+netConst+'.'));
+
+  steps.push(st(4,'division',
+    'Divide both sides by '+netCoeff,'Isolate '+varName,
+    netCoeff+varName+' = '+netConst+
+    '\n\n'+varName+' = '+netConst+' / '+netCoeff+
+    '\n'+varName+' = '+answer,
+    'Dividing both sides by '+netCoeff+' gives '+varName+' = '+answer+'.'));
+
+  // Verify
+  var lhsVal = L.coeff * answer + L.constant;
+  var rhsVal = R.coeff * answer + R.constant;
+
+  return mk(q,
+    'Linear equation with variable "'+varName+'" on both sides. We collect like terms: move all '+varName+' terms to the left and all numbers to the right.',
+    steps,
+    varName+' = '+answer,
+    'Verify: LHS = '+lhsVal.toFixed(4)+', RHS = '+rhsVal.toFixed(4)+' '+( Math.abs(lhsVal-rhsVal)<0.001?'✓ Correct!':'✗ Check working'),
+    'Rule: same operation on both sides. Move variables to one side, constants to the other.');
+}
+function solveDiff(q){var pm=[...q.matchAll(/([+\-]?\s*\d*\.?\d*)\s*x\^?([234])/gi)];var result=[];var steps=[st(1,'general','Power Rule: d/dx(x^n) = n*x^(n-1)','','d/dx(x^n) = n * x^(n-1)\nd/dx(constant) = 0','Multiply by power, reduce power by 1.')];pm.forEach(function(m){var pow=parseInt(m[2]);var coeff=parseFloat(m[1].replace(/\s/g,'')||'1');var nc=coeff*pow,np=pow-1;var term=np===0?''+nc:np===1?nc+'x':nc+'x^'+np;result.push(term);steps.push(st(steps.length+1,'multiplication','d/dx['+(coeff===1?'':coeff)+'x^'+pow+'] = '+term,'Power Rule',coeff+' x '+pow+' x x^'+np+' = '+term,'Coeff '+coeff+' x power '+pow+' = '+nc+', power '+pow+'->'+np));});if(/sinx|sin\(x\)/i.test(q)){result.push('cos(x)');steps.push(st(steps.length+1,'general','d/dx[sin x] = cos x','','d/dx[sin x] = cos x','Derivative of sin is cos.'));}if(/cosx|cos\(x\)/i.test(q)){result.push('-sin(x)');steps.push(st(steps.length+1,'general','d/dx[cos x] = -sin x','','d/dx[cos x] = -sin x','Note negative sign!'));}if(/e\^x/i.test(q)){result.push('e^x');steps.push(st(steps.length+1,'general','d/dx[e^x] = e^x','','d/dx[e^x] = e^x','e^x is its own derivative!'));}if(/ln\s*x/i.test(q)){result.push('1/x');steps.push(st(steps.length+1,'general','d/dx[ln x] = 1/x','','d/dx[ln x] = 1/x','Log derivative.'));}var ans=result.join(' + ')||'0';steps.push(st(steps.length+1,'addition','Final answer','','f\'(x) = '+ans,'Combined derivative.'));return mk(q,'Differentiating term by term using Power Rule.',steps,'f\'(x) = '+ans,'','Power Rule: multiply by power, reduce power by 1. d/dx(constant)=0');}
+function solveInteg(q){var pm=[...q.matchAll(/([+\-]?\s*\d*\.?\d*)\s*x\^?([234])/gi)];var result=[];var steps=[st(1,'general','Power Rule: integral x^n = x^(n+1)/(n+1)+C','','integral x^n dx = x^(n+1)/(n+1) + C','Add 1 to power, divide by new power.')];pm.forEach(function(m){var pow=parseInt(m[2]);var coeff=parseFloat(m[1].replace(/\s/g,'')||'1');var np=pow+1;var nc=parseFloat((coeff/np).toFixed(4));result.push(nc+'x^'+np);steps.push(st(steps.length+1,'general','Integrate '+(coeff===1?'':coeff)+'x^'+pow,'','Power: '+pow+'+1='+np+', Coeff: '+coeff+'/'+np+'='+nc+', Result: '+nc+'x^'+np,'Integral term.'));});if(/sinx|sin\(x\)/i.test(q)){result.push('-cos(x)');steps.push(st(steps.length+1,'general','integral sin x = -cos x','','integral sin x dx = -cos x + C','Note negative!'));}if(/cosx|cos\(x\)/i.test(q)){result.push('sin(x)');steps.push(st(steps.length+1,'general','integral cos x = sin x','','integral cos x dx = sin x + C',''));}if(/e\^x/i.test(q)){result.push('e^x');steps.push(st(steps.length+1,'general','integral e^x = e^x','','integral e^x dx = e^x + C','e^x integrates to itself!'));}var ans=result.join(' + ')||'result';steps.push(st(steps.length+1,'addition','Write answer with +C','','= '+ans+' + C','Always add C!'));return mk(q,'Integrating term by term.',steps,'= '+ans+' + C','','Always write +C! For definite integrals use F(b)-F(a).');}
+function solveTrig(q){var tbl={'sin0':0,'sin30':0.5,'sin45':0.7071,'sin60':0.8660,'sin90':1,'cos0':1,'cos30':0.8660,'cos45':0.7071,'cos60':0.5,'cos90':0,'tan0':0,'tan30':0.5774,'tan45':1,'tan60':1.7321};var expr=q.toLowerCase().replace(/°/g,'').replace(/\s/g,'');var keys=Object.keys(tbl);for(var i=0;i<keys.length;i++)expr=expr.split(keys[i]).join(String(tbl[keys[i]]));var res=null;try{res=parseFloat(calcExpr(expr).toFixed(4));}catch(e){}var sub=q.replace(/sin90/gi,'1').replace(/sin60/gi,'sqrt(3)/2').replace(/sin45/gi,'sqrt(2)/2').replace(/sin30/gi,'1/2').replace(/sin0/gi,'0').replace(/cos0/gi,'1').replace(/cos30/gi,'sqrt(3)/2').replace(/cos45/gi,'sqrt(2)/2').replace(/cos60/gi,'1/2').replace(/cos90/gi,'0').replace(/tan45/gi,'1').replace(/tan30/gi,'1/sqrt(3)').replace(/tan60/gi,'sqrt(3)');return mk(q,'Evaluating using standard trig values table.',[st(1,'general','Trig Table','Memorise','     0   30   45   60   90\nsin: 0  1/2  v2/2 v3/2  1\ncos: 1  v3/2 v2/2  1/2  0\ntan: 0 1/v3   1   v3  undef','Must be memorised!'),st(2,'general','Substitute','',sub,'Replace each function.'),st(3,'general','Calculate','',res!==null?'= '+res:'Simplify',res!==null?'Result = '+res:'See above.')],''+( res!==null?'= '+res:'See working'),'','sin: 0->1/2->v2/2->v3/2->1 for 0->30->45->60->90. cos is reverse!');}
+function solveMean(q){var n=nums(q);if(!n.length)return solveExpression(q);var s=n.reduce(function(a,b){return a+b;},0);var m=parseFloat((s/n.length).toFixed(4));return mk(q,'Mean = sum / count.',[st(1,'addition','Sum all values','',n.join('+')+'='+s,'Sum = '+s),st(2,'division','Divide by n','',s+'/'+n.length+'='+m,'Mean = '+m)],'Mean = '+m,'','Mean sensitive to outliers. Use median if extreme values exist.');}
+function solveMedian(q){var n=nums(q);if(!n.length)return solveExpression(q);var s=[].concat(n).sort(function(a,b){return a-b;});var mid=Math.floor(s.length/2);var med=s.length%2===0?parseFloat(((s[mid-1]+s[mid])/2).toFixed(4)):s[mid];return mk(q,'Median = middle value after sorting.',[st(1,'general','Sort','',s.join(', '),'Sorted ascending.'),st(2,'general','Find middle','n='+s.length,s.length%2===0?'('+s[mid-1]+'+'+s[mid]+')/2='+med:'Position '+(mid+1)+': '+med,'Median = '+med)],'Median = '+med,'','Median not affected by outliers!');}
+function solveMode(q){var n=nums(q);if(!n.length)return solveExpression(q);var f={};n.forEach(function(x){f[x]=(f[x]||0)+1;});var mF=Math.max.apply(null,Object.keys(f).map(function(k){return f[k];}));var modes=Object.keys(f).filter(function(k){return f[k]===mF;}).map(Number);return mk(q,'Mode = most frequent value.',[st(1,'general','Count frequencies','',Object.keys(f).map(function(k){return k+': '+f[k]+' times';}).join('\n'),'Tally each value.'),st(2,'general','Find highest','','Mode = '+modes.join(', ')+' (freq='+mF+')','Mode = '+modes.join(', '))],'Mode = '+modes.join(', '),'','Can have 0, 1 or many modes!');}
+function solveSD(q){var n=nums(q);if(!n.length)return solveExpression(q);var mean=parseFloat((n.reduce(function(a,b){return a+b;},0)/n.length).toFixed(4));var variance=parseFloat((n.map(function(x){return (x-mean)*(x-mean);}).reduce(function(a,b){return a+b;},0)/n.length).toFixed(4));var sd=parseFloat(Math.sqrt(variance).toFixed(4));return mk(q,'Standard Deviation = sqrt(Variance).',[st(1,'division','Mean','',mean,'Mean = '+mean),st(2,'general','(x-mean)^2 each','',n.map(function(x){return '('+x+'-'+mean+')^2='+((x-mean)*(x-mean)).toFixed(4);}).join('\n'),'Square deviations.'),st(3,'division','Variance = sum/n','',variance,'Variance = '+variance),st(4,'order','SD = sqrt(var)','','sqrt('+variance+') = '+sd,'SD = '+sd)],'SD = '+sd,'','Small SD = data close to mean. Large SD = spread out.');}
+function solveVar(q){var n=nums(q);if(!n.length)return solveExpression(q);var mean=parseFloat((n.reduce(function(a,b){return a+b;},0)/n.length).toFixed(4));var sq=n.map(function(x){return parseFloat(((x-mean)*(x-mean)).toFixed(4));});var v=parseFloat((sq.reduce(function(a,b){return a+b;},0)/n.length).toFixed(4));return mk(q,'Variance = average squared deviation from mean.',[st(1,'division','Mean','',mean,'Mean = '+mean),st(2,'general','(x-mean)^2','',n.map(function(x,i){return '('+x+'-'+mean+')^2='+sq[i];}).join('\n'),'Squared deviations.'),st(3,'division','Variance=sum/n','',sq.join('+')+'/'+n.length+'='+v,'Variance = '+v)],'Variance = '+v,'','SD = sqrt('+v+') = '+parseFloat(Math.sqrt(v).toFixed(4)));}
+function solveRange(q){var n=nums(q);if(!n.length)return solveExpression(q);var mn=Math.min.apply(null,n),mx=Math.max.apply(null,n);return mk(q,'Range = Max - Min.',[st(1,'general','Min and Max','','Min='+mn+', Max='+mx,'Scan all values.'),st(2,'subtraction','Range','',mx+'-'+mn+'='+(mx-mn),'Range = '+(mx-mn))],'Range = '+(mx-mn),'','Range only uses 2 values. SD uses all values.');}
+function solveHCF(q){var n=nums(q);if(n.length<2)return solveExpression(q);var r=n.reduce(gcd);return mk(q,'HCF = largest number dividing all given numbers.',[st(1,'general','Prime factorization','',n.map(function(x){return x+'='+primeF(x);}).join('\n'),'Factor each number.'),st(2,'general','Common factors','','HCF('+n.join(',')+')\n= '+r,'HCF = '+r)],'HCF = '+r,n.map(function(x){return x+'/'+r+'='+x/r;}).join(', ')+'  ✓','HCF <= smallest number.');}
+function solveLCM(q){var n=nums(q);if(n.length<2)return solveExpression(q);function lcm(a,b){return a*b/gcd(a,b);}var r=n.reduce(lcm);return mk(q,'LCM = smallest number divisible by all given.',[st(1,'general','Prime factorization','',n.map(function(x){return x+'='+primeF(x);}).join('\n'),'Factor each.'),st(2,'multiplication','Highest powers','','LCM('+n.join(',')+')\n= '+r,'LCM = '+r)],'LCM = '+r,'','LCM >= largest number.');}
+function solvePercent(q){var n=nums(q);var pct=n[0]||25,num=n[1]||840;var ans=parseFloat((pct*num/100).toFixed(4));return mk(q,'Finding '+pct+'% of '+num+'.',[st(1,'division','% to decimal','',pct+'/100='+pct/100,pct+'% = '+pct/100),st(2,'multiplication','Multiply','',pct/100+'x'+num+'='+ans,'Answer = '+ans)],''+pct+'% of '+num+' = '+ans,'','10%=÷10, 25%=÷4, 50%=÷2.');}
+function solveDet(q){var ms=[...q.matchAll(/\[\s*\[([\d\s,.-]+)\]\s*,\s*\[([\d\s,.-]+)\]\s*\]/g)];if(!ms.length)return solveExpression(q);var m=[ms[0][1].split(',').map(Number),ms[0][2].split(',').map(Number)];var det=m[0][0]*m[1][1]-m[0][1]*m[1][0];return mk(q,'Determinant of 2x2 matrix: det = ad - bc.',[st(1,'multiplication','Main diagonal axd','',m[0][0]+'x'+m[1][1]+'='+m[0][0]*m[1][1],'Top-left x bottom-right.'),st(2,'multiplication','Anti-diagonal bxc','',m[0][1]+'x'+m[1][0]+'='+m[0][1]*m[1][0],'Top-right x bottom-left.'),st(3,'subtraction','det = axd - bxc','',m[0][0]*m[1][1]+'-'+m[0][1]*m[1][0]+'='+det,'det = '+det)],'det = '+det,det===0?'Singular matrix (no inverse)':'Invertible matrix ✓','det=0 means no inverse exists!');}
+
+// ── DISPATCHER ──────────────────────────────────────────────────────────────
+function solve(q){
+  var t=detect(q);
+  if(t==='zeta')return solveZeta(q);
+  if(t==='euler_e')return solveEulerE(q);
+  if(t==='fibonacci')return solveFibonacci(q);
+  if(t==='primes')return solvePrimes(q);
+  if(t==='binomial')return solveBinomial(q);
+  if(t==='logarithm')return solveLogarithm(q);
+  if(t==='complex')return solveComplex(q);
+  if(t==='golden')return solveGolden(q);
+  if(t==='probability')return solveProbability(q);
+  if(t==='permcomb')return solvePermComb(q);
+  if(t==='limit')return solveLimit(q);
+  if(t==='bodmas')return solveBODMAS(q);
+  if(t==='si')return solveSI(q);
+  if(t==='ci')return solveCI(q);
+  if(t==='profit')return solvePL(q);
+  if(t==='discount')return solveDiscount(q);
+  if(t==='vat')return solveVAT(q);
+  if(t==='circle')return solveCircle(q);
+  if(t==='triangle')return solveTriangle(q);
+  if(t==='pythagoras')return solvePyth(q);
+  if(t==='cylinder')return solveCylinder(q);
+  if(t==='sphere')return solveSphere(q);
+  if(t==='rectangle')return solveRect(q);
+  if(t==='quadratic')return solveQuad(q);
+  if(t==='linear')return solveLinear(q);
+  if(t==='diff')return solveDiff(q);
+  if(t==='integrate')return solveInteg(q);
+  if(t==='trig')return solveTrig(q);
+  if(t==='mean')return solveMean(q);
+  if(t==='median')return solveMedian(q);
+  if(t==='mode')return solveMode(q);
+  if(t==='variance')return solveVar(q);
+  if(t==='sd')return solveSD(q);
+  if(t==='range')return solveRange(q);
+  if(t==='hcf')return solveHCF(q);
+  if(t==='lcm')return solveLCM(q);
+  if(t==='percent')return solvePercent(q);
+  if(t==='determinant')return solveDet(q);
+  return solveExpression(q);
+}
+
+// ── RENDER ──────────────────────────────────────────────────────────────────
+function renderSol(d){
+  var h='<div class="sol-wrap">';
+  h+='<div class="prob-box"><div class="prob-lbl">Problem</div><div class="prob-eq">'+esc(d.problem)+'</div></div>';
+  if(d.intro)h+='<div class="intro-txt">'+esc(d.intro)+'</div>';
+  d.steps.forEach(function(s,i){
+    var t=s.type||'general';
+    var spkT=esc('Step '+s.num+'. '+s.title+'. '+s.explanation+'. '+s.expression.replace(/\n/g,'. '));
+    h+='<div class="step-card" id="sc'+i+'"><div class="step-head"><div class="snum '+t+'">'+s.num+'</div>';
+    h+='<div class="stitle">'+esc(s.title)+'</div>';
+    if(s.rule)h+='<div class="srule">'+esc(s.rule)+'</div>';
+    h+='<button class="sspk" onclick="spkStep(this,\''+spkT+'\')">🔊</button></div>';
+    h+='<div class="sbody"><div class="sexpr">'+esc(s.expression)+'</div><div class="sexp">'+esc(s.explanation)+'</div></div></div>';
+  });
+  var sd=JSON.stringify({steps:d.steps,intro:d.intro,answer:d.answer,tip:d.tip}).replace(/"/g,'&quot;');
+  h+='<div class="ans-card"><div class="ans-left"><div class="ans-icon">✅</div><div><div class="ans-lbl">Final Answer</div><div class="ans-val">'+esc(d.answer)+'</div></div></div>';
+  h+='<button class="read-all-btn" onclick="readAll(this)" data-sol="'+sd+'">▶ Read All</button></div>';
+  if(d.verify)h+='<div class="ver-card">🔍 '+esc(d.verify)+'</div>';
+  if(d.tip)h+='<div class="tip-card">💡 '+esc(d.tip)+'</div>';
+  h+='</div>';return h;
+}
+
+function readAll(btn){
+  if(!voiceOn)return;
+  window.speechSynthesis.cancel();
+  var data=JSON.parse(btn.getAttribute('data-sol').replace(/&quot;/g,'"'));
+  btn.textContent='⏹ Stop';
+  var cards=btn.closest('.sol-wrap').querySelectorAll('.step-card');
+  speakAll(data.steps,data.intro,data.answer,data.tip);
+  var chk=setInterval(function(){if(!window.speechSynthesis.speaking){btn.textContent='▶ Read All';cards.forEach(function(c){c.classList.remove('active-step');});clearInterval(chk);}},600);
+}
+function spkStep(btn,text){
+  if(!voiceOn)return;
+  document.querySelectorAll('.sspk').forEach(function(b){b.textContent='🔊';});
+  btn.textContent='⏸';
+  speak(text,function(){btn.textContent='🔊';});
+}
+
+function setStatus(t,busy){stxtEl.textContent=t;sdotEl.className='sdot'+(busy?' busy':'');}
+
+function addUser(text,files){
+  var d=document.createElement('div');d.className='msg user';
+  var c='';
+  if(files&&files.length){files.forEach(function(f){if(f.type&&f.type.startsWith('image/')){c+='<img class="atch-img" src="'+f.data+'" alt="'+esc(f.name)+'">';}else{var icon=f.name.endsWith('.pdf')?'📄':'📎';c+='<div class="atch-chip"><span>'+icon+'</span><span>'+esc(f.name.substring(0,20))+'</span></div>';}});}
+  if(text)c+='<div class="ubub">'+esc(text)+'</div>';
+  d.innerHTML='<div class="av">🧑</div><div>'+c+'<div class="ts">'+getTime()+'</div></div>';
+  msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;
+}
+function addAgent(html){return new Promise(function(r){var d=document.createElement('div');d.className='msg agent';d.innerHTML='<div class="av">🧮</div><div>'+html+'<div class="ts">'+getTime()+'</div></div>';msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;r();});}
+function showTyping(){removeTyping();var d=document.createElement('div');d.className='msg agent';d.id='ty';d.innerHTML='<div class="av">🧮</div><div class="tdots"><div class="td"></div><div class="td"></div><div class="td"></div></div>';msgsEl.appendChild(d);msgsEl.scrollTop=msgsEl.scrollHeight;}
+function removeTyping(){var t=document.getElementById('ty');if(t)t.remove();}
+
+async function sendMsg(){
+  var text=txtEl.value.trim();var files=pendingFiles.slice();
+  if(!text&&!files.length)return;if(isBusy)return;
+  isBusy=true;sendBtn.disabled=true;txtEl.value='';txtEl.style.height='auto';
+  pendingFiles=[];renderAttachPreview();
+  addUser(text,files);
+  faceEl.classList.add('thinking');setStatus('Solving...',true);showTyping();
+  await new Promise(function(r){setTimeout(r,300+Math.random()*200);});
+  removeTyping();faceEl.classList.remove('thinking');
+  var q=text;
+  if(!q&&files.length){
+    var ft='';
+    files.forEach(function(f){if(f.type&&!f.type.startsWith('image/')&&typeof f.data==='string'&&!f.data.startsWith('data:')){ft+=f.data.substring(0,2000);}});
+    if(ft){var nums_found=ft.match(/[\d\s+\-*/x().=]+/g);if(nums_found)q=nums_found.join(' ').trim();}
+    if(!q){
+      await addAgent(renderSol({problem:'File attached: '+files[0].name,intro:'I received your file! For image files, please also type the math question in the text box.',steps:[st(1,'general','How to use file upload','',('1. Attach your photo\n2. Type the math question\n3. I solve it step by step'),'Works best when you type the question!')],answer:'Type the question from your image in the text box',verify:'',tip:'Take a photo of your textbook question, attach it, and type it — I will solve it!'}));
+      setStatus('Ready',false);isBusy=false;sendBtn.disabled=false;return;
+    }
+  }
+  var result=solve(q||text);
+  await addAgent(renderSol(result));
+  setStatus('Ready',false);
+  if(voiceOn)setTimeout(function(){speakAll(result.steps,result.intro,result.answer,result.tip);},300);
+  isBusy=false;sendBtn.disabled=false;txtEl.focus();
+}
+
+function qs(t){if(isBusy)return;txtEl.value=t;sendMsg();}
+txtEl.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}});
+txtEl.addEventListener('input',function(){txtEl.style.height='auto';txtEl.style.height=Math.min(txtEl.scrollHeight,110)+'px';});
+window.speechSynthesis.onvoiceschanged=function(){};
+
+// Drag and drop
+document.getElementById('app').addEventListener('dragover',function(e){e.preventDefault();});
+document.getElementById('app').addEventListener('drop',function(e){e.preventDefault();var files=e.dataTransfer.files;if(files.length)handleFiles(files);});
+
+// Welcome
+setTimeout(function(){
+  addAgent(renderSol(solveZeta('zeta function s=2')));
+  if(voiceOn)setTimeout(function(){speak('Welcome to MathBot Ultimate! I can solve any math problem from basic arithmetic to the Riemann Zeta function and beyond. Just type your problem or attach a photo!');},500);
+},400);
+</script>
+</body>
+</html>
